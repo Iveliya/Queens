@@ -260,6 +260,18 @@ void printFreeCells(char** board, int rows, int cols)
     std::cout << "Total free: " << count << "\n";
 }
 
+bool isGameOver(char** board, int rows, int cols)
+{
+    return countFreeCells(board, rows, cols) == 0;
+}
+
+void printWinner(int currentPlayer)
+{
+    int winner = (currentPlayer == 1) ? 2 : 1;
+    std::cout << "Game over! Player " << winner << " wins.\n";
+}
+
+
 void gameLoop(char** board, int rows, int cols)
 {
     int currentPlayer = 1;
@@ -270,6 +282,12 @@ void gameLoop(char** board, int rows, int cols)
 
     while (true)
     {
+        if (isGameOver(board, rows, cols))
+        {
+            printWinner(currentPlayer);
+            break;
+        }
+
         std::cout << "\n> ";
         std::cin >> command;
 
