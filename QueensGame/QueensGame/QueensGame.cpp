@@ -183,6 +183,81 @@ bool placeQueen(char** board, int rows, int cols, int r, int c, char playerQueen
     return true;
 }
 
+void printHelp()
+{
+    std::cout << "Available commands:\n";
+    std::cout << "  play r c   - place a queen at row r, column c\n";
+    std::cout << "  show       - display the board\n";
+    std::cout << "  turn       - show whose turn it is\n";
+    std::cout << "  help       - show this help message\n";
+    std::cout << "  exit       - quit the game\n";
+}
+
+void printTurn(int currentPlayer)
+{
+    std::cout << "Current turn: Player " << currentPlayer << std::endl;
+}
+
+bool handlePlayCommand(char** board, int rows, int cols,
+    int r, int c, int& currentPlayer)
+{
+    char queen = (currentPlayer == 1) ? P1_QUEEN : P2_QUEEN;
+
+    if (!placeQueen(board, rows, cols, r, c, queen))
+    {
+        std::cout << "Invalid move!\n";
+        return false;
+    }
+
+    currentPlayer = (currentPlayer == 1) ? 2 : 1;
+    return true;
+}
+
+void gameLoop(char** board, int rows, int cols)
+{
+    int currentPlayer = 1;
+    char command[16];
+
+    printHelp();
+    printBoard(board, rows, cols);
+
+    while (true)
+    {
+        std::cout << "\n> ";
+        std::cin >> command;
+
+        if (std::strcmp(command, "play") == 0)
+        {
+            int r, c;
+            std::cin >> r >> c;
+            handlePlayCommand(board, rows, cols, r, c, currentPlayer);
+            printBoard(board, rows, cols);
+        }
+        else if (std::strcmp(command, "show") == 0)
+        {
+            printBoard(board, rows, cols);
+        }
+        else if (std::strcmp(command, "turn") == 0)
+        {
+            printTurn(currentPlayer);
+        }
+        else if (std::strcmp(command, "help") == 0)
+        {
+            printHelp();
+        }
+        else if (std::strcmp(command, "exit") == 0)
+        {
+            std::cout << "Exiting game...\n";
+            break;
+        }
+        else
+        {
+            std::cout << "Unknown command. Type 'help' for options.\n";
+        }
+    }
+}
+
+
 int main()
 {
     int rows = 5;
@@ -190,33 +265,8 @@ int main()
 
     char** board = createBoard(rows, cols);
 
-    printBoard(board, rows, cols);
-
-
-    std::cout << "\nPlace P1 at (0,0):\n";
-    if (!placeQueen(board, rows, cols, 0, 0, P1_QUEEN))
-    {
-        std::cout << "Invalid move!\n";
-    }
-    printBoard(board, rows, cols);
-
-    std::cout << "\nPlace P2 at (0,2) (should be invalid because same row):\n";
-    if (!placeQueen(board, rows, cols, 0, 2, P2_QUEEN))
-    {
-        std::cout << "Invalid move!\n";
-    }
-    printBoard(board, rows, cols);
-
-    std::cout << "\nPlace P2 at (2,1):\n";
-    if (!placeQueen(board, rows, cols, 2, 1, P2_QUEEN))
-    {
-        std::cout << "Invalid move!\n";
-    }
-    printBoard(board, rows, cols);
+    gameLoop(board, rows, cols);
     
-
-
-
     destroyBoard(board, rows);  
     return 0;
 }
