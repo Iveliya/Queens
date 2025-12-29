@@ -4,6 +4,7 @@
 #include <iostream>
 
 const char EMPTY_CELL = '.';
+const char QUEEN = 'Q';
 
 char** createBoard(int rows, int cols)
 {
@@ -70,18 +71,41 @@ bool isInside(int rows, int cols, int r, int c)
     return true;
 }
 
+bool placeQueen(char** board, int rows, int cols, int r, int c)
+{
+    if (!isInside(rows, cols, r, c))
+    {
+        return false;
+    }
+
+    if (board[r][c] != EMPTY_CELL)
+    {
+        return false;
+    }
+
+    board[r][c] = QUEEN;
+    return true;
+}
+
 int main()
 {
     int rows = 7;
     int cols = 10;
 
     char** board = createBoard(rows, cols);
+    if (placeQueen(board, rows, cols, 1, 5))
+    {
+        std::cout << "Queen placed successfully.\n";
+    }
+    else
+    {
+        std::cout << "Failed to place queen.\n";
+    }
+
     printBoard(board, rows, cols);
 
-    std::cout << "Test isInside:\n";
-    std::cout << "(0,0): " << isInside(rows, cols, 0, 0) << std::endl;
-    std::cout << "(-1,0): " << isInside(rows, cols, -1, 0) << std::endl;
-    std::cout << "(rows,0): " << isInside(rows, cols, rows, 0) << std::endl;
+    
+
 
 
     destroyBoard(board, rows);  
