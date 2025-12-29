@@ -55,6 +55,21 @@ void printBoard(char** board, int rows, int cols)
     }
 }
 
+bool isInside(int rows, int cols, int r, int c)
+{
+    if (r < 0 || r >= rows)
+    {
+        return false;
+    }
+
+    if (c < 0 || c >= cols)
+    {
+        return false;
+    }
+
+    return true;
+}
+
 int main()
 {
     int rows = 7;
@@ -62,6 +77,12 @@ int main()
 
     char** board = createBoard(rows, cols);
     printBoard(board, rows, cols);
+
+    std::cout << "Test isInside:\n";
+    std::cout << "(0,0): " << isInside(rows, cols, 0, 0) << std::endl;
+    std::cout << "(-1,0): " << isInside(rows, cols, -1, 0) << std::endl;
+    std::cout << "(rows,0): " << isInside(rows, cols, rows, 0) << std::endl;
+
 
     destroyBoard(board, rows);  
     return 0;
