@@ -37,21 +37,33 @@ void destroyBoard(char** board, int rows)
     delete[] board;
 }
 
-int main()
+void printBoard(char** board, int rows, int cols)
 {
-    int rows = 5;
-    int cols = 6;
-
-    char** board = createBoard(rows, cols);
-    for (int i = 0; i < rows; i++)
+    if (board == NULL)
     {
-        for (int j = 0; j < cols; j++)
-        {
-            std::cout << board[i][j] << " ";
-        }std::cout << std::endl;
+        std::cout << "(board is NULL)\n";
+        return;
     }
 
-    destroyBoard(board, rows);   
+    for (int r = 0; r < rows; r++)
+    {
+        for (int c = 0; c < cols; c++)
+        {
+            std::cout << board[r][c] << ' ';
+        }
+        std::cout << '\n';
+    }
+}
+
+int main()
+{
+    int rows = 7;
+    int cols = 10;
+
+    char** board = createBoard(rows, cols);
+    printBoard(board, rows, cols);
+
+    destroyBoard(board, rows);  
     return 0;
 }
 
