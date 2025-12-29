@@ -2,6 +2,8 @@
 //
 
 #include <iostream>
+#include <cstring>
+
 
 const char EMPTY_CELL = '.';
 const char ATTACKED_CELL = '*';
@@ -189,6 +191,7 @@ void printHelp()
     std::cout << "  play r c   - place a queen at row r, column c\n";
     std::cout << "  show       - display the board\n";
     std::cout << "  turn       - show whose turn it is\n";
+    std::cout << "  free       - list all valid moves for the current player\n";
     std::cout << "  help       - show this help message\n";
     std::cout << "  exit       - quit the game\n";
 }
@@ -211,6 +214,50 @@ bool handlePlayCommand(char** board, int rows, int cols,
 
     currentPlayer = (currentPlayer == 1) ? 2 : 1;
     return true;
+}
+
+int countFreeCells(char** board, int rows, int cols)
+{
+    int count = 0;
+
+    for (int r = 0; r < rows; r++)
+    {
+        for (int c = 0; c < cols; c++)
+        {
+            if (canPlaceQueenAt(board, rows, cols, r, c))
+            {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
+void printFreeCells(char** board, int rows, int cols)
+{
+    int count = 0;
+
+    std::cout << "Free cells:\n";
+
+    for (int r = 0; r < rows; r++)
+    {
+        for (int c = 0; c < cols; c++)
+        {
+            if (canPlaceQueenAt(board, rows, cols, r, c))
+            {
+                std::cout << "(" << r << "," << c << ") ";
+                count++;
+            }
+        }
+
+        if (count > 0)
+        {
+            std::cout << "\n";
+        }
+    }
+
+    std::cout << "Total free: " << count << "\n";
 }
 
 void gameLoop(char** board, int rows, int cols)
@@ -245,6 +292,10 @@ void gameLoop(char** board, int rows, int cols)
         {
             printHelp();
         }
+        else if (strcmp(command, "free") == 0)
+        {
+            printFreeCells(board, rows, cols);
+        }
         else if (std::strcmp(command, "exit") == 0)
         {
             std::cout << "Exiting game...\n";
@@ -256,7 +307,6 @@ void gameLoop(char** board, int rows, int cols)
         }
     }
 }
-
 
 int main()
 {
