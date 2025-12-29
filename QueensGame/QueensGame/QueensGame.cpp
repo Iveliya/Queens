@@ -271,23 +271,35 @@ void printWinner(int currentPlayer)
     std::cout << "Game over! Player " << winner << " wins.\n";
 }
 
+bool hasAnyValidMove(char** board, int rows, int cols)
+{
+    for (int r = 0; r < rows; r++)
+    {
+        for (int c = 0; c < cols; c++)
+        {
+            if (canPlaceQueenAt(board, rows, cols, r, c))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
 
 void gameLoop(char** board, int rows, int cols)
 {
     int currentPlayer = 1;
+    bool gameOver = false;
     char command[16];
 
     printHelp();
     printBoard(board, rows, cols);
 
-    while (true)
+    while (!gameOver)
     {
-        if (isGameOver(board, rows, cols))
-        {
-            printWinner(currentPlayer);
-            break;
-        }
-
         std::cout << "\n> ";
         std::cin >> command;
 
@@ -295,8 +307,22 @@ void gameLoop(char** board, int rows, int cols)
         {
             int r, c;
             std::cin >> r >> c;
-            handlePlayCommand(board, rows, cols, r, c, currentPlayer);
-            printBoard(board, rows, cols);
+
+            int playerWhoMoved = currentPlayer;
+
+            if (handlePlayCommand(board, rows, cols, r, c, currentPlayer))
+            {
+                printBoard(board, rows, cols);
+
+                if (!hasAnyValidMove(board, rows, cols))
+                {
+                    std::cout << "No valid moves for Player "
+                        << currentPlayer << "!\n";
+                    std::cout << "Player "
+                        << playerWhoMoved << " wins!\n";
+                    gameOver = true;
+                }
+            }
         }
         else if (std::strcmp(command, "show") == 0)
         {
@@ -310,7 +336,7 @@ void gameLoop(char** board, int rows, int cols)
         {
             printHelp();
         }
-        else if (strcmp(command, "free") == 0)
+        else if (std::strcmp(command, "free") == 0)
         {
             printFreeCells(board, rows, cols);
         }
@@ -325,6 +351,7 @@ void gameLoop(char** board, int rows, int cols)
         }
     }
 }
+
 
 int main()
 {
