@@ -13,7 +13,34 @@ const char P1_QUEEN = '1';
 const char P2_QUEEN = '2';
 const char MOVE_LOG_FILE[] = "moves_log.txt"; 
 const char SAVES_FILE[] = "saves.txt";
+const int MAX_SIZE = 15;
 
+int readBoardSize(const char* name)
+{
+    int size;
+
+    while (true)
+    {
+        std::cout << "Enter " << name << " (1.." << MAX_SIZE << "): ";
+        std::cin >> size;
+
+        if (!std::cin)
+        {
+            std::cin.clear();
+            std::cin.ignore(10000, '\n');
+            std::cout << "Invalid input. Please enter a number.\n";
+            continue;
+        }
+
+        if (size < 1 || size > MAX_SIZE)
+        {
+            std::cout << "Size must be between 1 and " << MAX_SIZE << ".\n";
+            continue;
+        }
+
+        return size;
+    }
+}
 
 
 char** createBoard(int rows, int cols)
@@ -47,6 +74,7 @@ void destroyBoard(char** board, int rows)
 
     delete[] board;
 }
+
 
 void printBoard(char** board, int rows, int cols)
 {
@@ -525,15 +553,14 @@ void gameLoop(char**& board, int& rows, int& cols)
 
 int main()
 {
-    int rows = 5;
-    int cols = 5;
+    int rows = readBoardSize("rows");
+    int cols = readBoardSize("columns");
 
     char** board = createBoard(rows, cols);
 
     gameLoop(board, rows, cols);
 
-    
-    destroyBoard(board, rows);  
+    destroyBoard(board, rows);
     return 0;
 }
 
