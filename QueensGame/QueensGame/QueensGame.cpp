@@ -94,6 +94,34 @@ void printBoard(char** board, int rows, int cols)
     }
 }
 
+void printMoveHistory(const char* filename)
+{
+    std::ifstream in(filename);
+    if (!in.is_open())
+    {
+        std::cout << "No history available.\n";
+        return;
+    }
+
+    char line[256];
+    bool found = false;
+
+    while (in.getline(line, 256))
+    {
+        if (std::strncmp(line, "Move ", 5) == 0)
+        {
+            std::cout << line << '\n';
+            found = true;
+        }
+    }
+
+    if (!found)
+    {
+        std::cout << "(no moves yet)\n";
+    }
+}
+
+
 bool isInside(int rows, int cols, int r, int c)
 {
     if (r < 0 || r >= rows)
@@ -230,6 +258,8 @@ void printHelp()
     std::cout << "  exit       - quit the game\n";
     std::cout << "  save name  - save current state with a name\n";
     std::cout << "  load name  - load state by name\n";
+    std::cout << "  history    - show move history\n";
+
 
 }
 
@@ -512,6 +542,10 @@ void gameLoop(char**& board, int& rows, int& cols)
         else if (std::strcmp(command, "free") == 0)
         {
             printFreeCells(board, rows, cols);
+        }
+        else if (std::strcmp(command, "history") == 0)
+        {
+            printMoveHistory(MOVE_LOG_FILE);
         }
         else if (std::strcmp(command, "exit") == 0)
         {
