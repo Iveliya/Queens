@@ -3,12 +3,18 @@
 
 #include <iostream>
 #include <cstring>
+#include <fstream>
+
 
 
 const char EMPTY_CELL = '.';
 const char ATTACKED_CELL = '*';
 const char P1_QUEEN = '1';
 const char P2_QUEEN = '2';
+const char MOVE_LOG_FILE[] = "moves_log.txt"; 
+const char SAVES_FILE[] = "saves.txt";
+
+
 
 char** createBoard(int rows, int cols)
 {
@@ -194,6 +200,9 @@ void printHelp()
     std::cout << "  free       - list all valid moves for the current player\n";
     std::cout << "  help       - show this help message\n";
     std::cout << "  exit       - quit the game\n";
+    std::cout << "  save name  - save current state with a name\n";
+    std::cout << "  load name  - load state by name\n";
+
 }
 
 void printTurn(int currentPlayer)
@@ -287,13 +296,142 @@ bool hasAnyValidMove(char** board, int rows, int cols)
     return false;
 }
 
-
-
-void gameLoop(char** board, int rows, int cols)
+bool saveNamedGame(const char* filename, const char* saveName,
+    char** board, int rows, int cols, int currentPlayer)
 {
+    std::ofstream out(filename, std::ios::app); 
+    if (!out.is_open())
+        return false;
+
+    out << "SAVE " << saveName << "\n";
+    out << rows << ' ' << cols << ' ' << currentPlayer << "\n";
+
+    for (int r = 0; r < rows; r++)
+    {
+        for (int c = 0; c < cols; c++)
+            out << board[r][c];
+        out << "\n";
+    }
+
+    out << "END\n\n";
+    return true;
+}
+
+
+bool loadNamedGame(const char* filename, const char* saveName,
+    char**& board, int& rows, int& cols, int& currentPlayer)
+{
+    std::ifstream in(filename);
+    if (!in.is_open())
+        return false;
+
+    char word[32];
+    char name[64];
+
+    while (in >> word)
+    {
+        if (std::strcmp(word, "SAVE") != 0)
+        {
+            in.ignore(1024, '\n');
+            continue;
+        }
+
+        in >> name;             
+        in.ignore(1024, '\n');  
+
+        int newRows, newCols, newPlayer;
+        in >> newRows >> newCols >> newPlayer;
+        in.ignore(1024, '\n');
+
+        char** temp = createBoard(newRows, newCols);
+
+        bool ok = true;
+        for (int r = 0; r < newRows && ok; r++)
+        {
+            for (int c = 0; c < newCols; c++)
+            {
+                char ch = (char)in.get();
+                if (!in || ch == '\n')
+                {
+                    ok = false;
+                    break;
+                }
+                temp[r][c] = ch;
+            }
+            char endline = (char)in.get();
+            if (!in || endline != '\n')
+                ok = false;
+        }
+
+        char endWord[16];
+        in >> endWord;
+        in.ignore(1024, '\n');
+
+        if (!ok || std::strcmp(endWord, "END") != 0)
+        {
+            destroyBoard(temp, newRows);
+            return false;
+        }
+
+        if (std::strcmp(name, saveName) == 0)
+        {
+            destroyBoard(board, rows);
+            board = temp;
+            rows = newRows;
+            cols = newCols;
+            currentPlayer = newPlayer;
+
+            recomputeAttackedCells(board, rows, cols);
+            return true;
+        }
+
+        destroyBoard(temp, newRows);
+    }
+
+    return false; 
+}
+
+
+void resetMoveLog(const char* filename)
+{
+    std::ofstream out(filename); 
+}
+
+void appendMoveLog(const char* filename,
+    int moveNumber, int player, int r, int c,
+    char** board, int rows, int cols)
+{
+    std::ofstream out(filename, std::ios::app);
+    if (!out.is_open())
+    {
+        return;
+    }
+
+    out << "Move " << moveNumber << ": Player " << player
+        << " played (" << r << "," << c << ")\n";
+
+    for (int rr = 0; rr < rows; rr++)
+    {
+        for (int cc = 0; cc < cols; cc++)
+        {
+            out << board[rr][cc] << ' ';
+        }
+        out << '\n';
+    }
+
+    out << "-------------------------\n";
+}
+
+
+void gameLoop(char**& board, int& rows, int& cols)
+{
+
     int currentPlayer = 1;
     bool gameOver = false;
     char command[16];
+    int moveNumber = 0;
+    resetMoveLog(MOVE_LOG_FILE);
+
 
     printHelp();
     printBoard(board, rows, cols);
@@ -313,6 +451,13 @@ void gameLoop(char** board, int rows, int cols)
             if (handlePlayCommand(board, rows, cols, r, c, currentPlayer))
             {
                 printBoard(board, rows, cols);
+
+
+                moveNumber++;
+
+                appendMoveLog(MOVE_LOG_FILE, moveNumber,
+                    playerWhoMoved, r, c,
+                    board, rows, cols);
 
                 if (!hasAnyValidMove(board, rows, cols))
                 {
@@ -345,6 +490,31 @@ void gameLoop(char** board, int rows, int cols)
             std::cout << "Exiting game...\n";
             break;
         }
+        else if (std::strcmp(command, "save") == 0)
+        {
+            char name[64];
+            std::cin >> name;
+
+            if (saveNamedGame(SAVES_FILE, name, board, rows, cols, currentPlayer))
+                std::cout << "Saved as '" << name << "' in " << SAVES_FILE << "\n";
+            else
+                std::cout << "Save failed!\n";
+        }
+        else if (std::strcmp(command, "load") == 0)
+        {
+            char name[64];
+            std::cin >> name;
+
+            if (loadNamedGame(SAVES_FILE, name, board, rows, cols, currentPlayer))
+            {
+                std::cout << "Loaded '" << name << "' from " << SAVES_FILE << "\n";
+                printBoard(board, rows, cols);
+            }
+            else
+            {
+                std::cout << "Load failed! No save named '" << name << "'.\n";
+            }
+        }
         else
         {
             std::cout << "Unknown command. Type 'help' for options.\n";
@@ -361,6 +531,7 @@ int main()
     char** board = createBoard(rows, cols);
 
     gameLoop(board, rows, cols);
+
     
     destroyBoard(board, rows);  
     return 0;
