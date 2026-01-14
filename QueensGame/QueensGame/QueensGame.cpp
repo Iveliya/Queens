@@ -1,6 +1,6 @@
 ﻿// QueensGame.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
-
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <cstring>
 #include <fstream>
@@ -259,6 +259,9 @@ void printHelp()
     std::cout << "  save name  - save current state with a name\n";
     std::cout << "  load name  - load state by name\n";
     std::cout << "  history    - show move history\n";
+    std::cout << "  back       - undo last move\n";
+
+
 
 
 }
@@ -480,6 +483,154 @@ void appendMoveLog(const char* filename,
     out << "-------------------------\n";
 }
 
+int parseNumber(const char text[], int& i)
+{
+    int value = 0;
+    while (text[i] >= '0' && text[i] <= '9')
+    {
+        value = value * 10 + (text[i] - '0');
+        i++;
+    }
+    return value;
+}
+
+bool extractCoordsFromMoveLine(const char line[], int& r, int& c)
+{
+    int i = 0;
+    while (line[i] != '\0' && line[i] != '(') i++;
+    if (line[i] != '(') return false;
+    i++; 
+
+    if (line[i] < '0' || line[i] > '9') return false;
+    r = parseNumber(line, i);
+
+    if (line[i] != ',') return false;
+    i++;
+
+    if (line[i] < '0' || line[i] > '9') return false;
+    c = parseNumber(line, i);
+
+    if (line[i] != ')') return false;
+
+    return true;
+}
+
+bool getLastMoveLine(const char* filename, char outLine[], int outSize)
+{
+    std::ifstream in(filename);
+    if (!in.is_open())
+        return false;
+
+    char line[256];
+    bool found = false;
+
+    while (in.getline(line, 256))
+    {
+        if (line[0] == 'M')
+        {
+            int i = 0;
+            while (line[i] != '\0' && i < outSize - 1)
+            {
+                outLine[i] = line[i];
+                i++;
+            }
+            outLine[i] = '\0';
+            found = true;
+        }
+    }
+
+    return found;
+}
+
+
+
+bool removeLastLogBlock(const char* filename, int rows)
+{
+    std::ifstream in(filename);
+    if (!in.is_open())
+        return false;
+
+    const int MAX_LINES = 5000;
+    char* lines[MAX_LINES];
+    int count = 0;
+
+    char buffer[256];
+
+    while (in.getline(buffer, 256) && count < MAX_LINES)
+    {
+        int len = (int)std::strlen(buffer);
+        lines[count] = new char[len + 1];
+        std::strcpy(lines[count], buffer);
+        count++;
+    }
+    in.close();
+
+    int linesToRemove = rows + 2; 
+    if (count < linesToRemove)
+    {
+        for (int i = 0; i < count; i++) delete[] lines[i];
+        return false;
+    }
+
+    int newCount = count - linesToRemove;
+
+    std::ofstream out(filename);
+    if (!out.is_open())
+    {
+        for (int i = 0; i < count; i++) delete[] lines[i];
+        return false;
+    }
+
+    for (int i = 0; i < newCount; i++)
+    {
+        out << lines[i] << "\n";
+    }
+    out.close();
+
+    for (int i = 0; i < count; i++) delete[] lines[i];
+    return true;
+}
+
+bool backCommand(char** board, int rows, int cols, int& currentPlayer, int& moveNumber)
+{
+    char lastMoveLine[256];
+
+    if (!getLastMoveLine(MOVE_LOG_FILE, lastMoveLine, 256))
+    {
+        std::cout << "No moves to undo.\n";
+        return false;
+    }
+
+    int r = 0, c = 0;
+    if (!extractCoordsFromMoveLine(lastMoveLine, r, c))
+    {
+        std::cout << "Cannot read last move from log.\n";
+        return false;
+    }
+
+    if (!isInside(rows, cols, r, c))
+    {
+        std::cout << "Invalid coordinates in log.\n";
+        return false;
+    }
+
+    board[r][c] = EMPTY_CELL;
+
+    recomputeAttackedCells(board, rows, cols);
+
+    currentPlayer = (currentPlayer == 1) ? 2 : 1;
+
+    if (!removeLastLogBlock(MOVE_LOG_FILE, rows))
+    {
+        std::cout << "Warning: could not update log file.\n";
+    }
+
+    if (moveNumber > 0) moveNumber--;
+
+    std::cout << "Last move undone.\n";
+    return true;
+}
+
 
 void gameLoop(char**& board, int& rows, int& cols)
 {
@@ -546,6 +697,13 @@ void gameLoop(char**& board, int& rows, int& cols)
         else if (std::strcmp(command, "history") == 0)
         {
             printMoveHistory(MOVE_LOG_FILE);
+        }
+        else if (std::strcmp(command, "back") == 0)
+        {
+            if (backCommand(board, rows, cols, currentPlayer, moveNumber))
+            {
+                printBoard(board, rows, cols);
+            }
         }
         else if (std::strcmp(command, "exit") == 0)
         {
