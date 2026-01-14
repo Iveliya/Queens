@@ -15,6 +15,17 @@ const char MOVE_LOG_FILE[] = "moves_log.txt";
 const char SAVES_FILE[] = "saves.txt";
 const int MAX_SIZE = 15;
 
+const int MODE_PVP = 1;
+const int MODE_PVE = 2;
+
+const int AI_EASY = 1;
+const int AI_MEDIUM = 2;
+const int AI_HARD = 3;
+
+const int HUMAN_PLAYER = 1;  
+const int ROBOT_PLAYER = 2;  
+
+
 int readBoardSize(const char* name)
 {
     int size;
@@ -41,6 +52,34 @@ int readBoardSize(const char* name)
         return size;
     }
 }
+
+int readIntInRange(const char* message, int minV, int maxV)
+{
+    int x;
+    while (true)
+    {
+        std::cout << message;
+        std::cin >> x;
+
+        if (!std::cin)
+        {
+            std::cin.clear();
+            std::cin.ignore(10000, '\n');
+            std::cout << "Invalid input. Please enter a number.\n";
+            continue;
+        }
+
+        if (x < minV || x > maxV)
+        {
+            std::cout << "Enter a value in range [" << minV << ".." << maxV << "].\n";
+            continue;
+        }
+
+        return x;
+    }
+}
+
+
 
 
 char** createBoard(int rows, int cols)
@@ -631,8 +670,142 @@ bool backCommand(char** board, int rows, int cols, int& currentPlayer, int& move
     return true;
 }
 
+int chooseGameMode()
+{
+    std::cout << "Choose mode:\n";
+    std::cout << "  1) Player vs Player\n";
+    std::cout << "  2) Player vs Robot\n";
+    return readIntInRange("Mode: ", 1, 2);
+}
 
-void gameLoop(char**& board, int& rows, int& cols)
+int chooseAiLevel()
+{
+    std::cout << "Choose robot difficulty:\n";
+    std::cout << "  1) Easy\n";
+    std::cout << "  2) Medium\n";
+    std::cout << "  3) Hard\n";
+    return readIntInRange("Difficulty: ", 1, 3);
+}
+
+bool findFirstValidMove(char** board, int rows, int cols, int& outR, int& outC)
+{
+    for (int r = 0; r < rows; r++)
+    {
+        for (int c = 0; c < cols; c++)
+        {
+            if (canPlaceQueenAt(board, rows, cols, r, c))
+            {
+                outR = r;
+                outC = c;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool findMediumMove(char** board, int rows, int cols, char robotQueen, int& bestR, int& bestC)
+{
+    bool found = false;
+    int bestScore = 1000000;
+
+    for (int r = 0; r < rows; r++)
+    {
+        for (int c = 0; c < cols; c++)
+        {
+            if (!canPlaceQueenAt(board, rows, cols, r, c))
+                continue;
+
+            board[r][c] = robotQueen;
+            recomputeAttackedCells(board, rows, cols);
+
+            int score = countFreeCells(board, rows, cols);
+
+            board[r][c] = EMPTY_CELL;
+            recomputeAttackedCells(board, rows, cols);
+
+            if (!found || score < bestScore)
+            {
+                found = true;
+                bestScore = score;
+                bestR = r;
+                bestC = c;
+            }
+        }
+    }
+
+    return found;
+}
+
+bool findHardMove(char** board, int rows, int cols, char robotQueen, char humanQueen, int& bestR, int& bestC)
+{
+    bool found = false;
+    int bestValue = -1000000;
+
+    for (int r = 0; r < rows; r++)
+    {
+        for (int c = 0; c < cols; c++)
+        {
+            if (!canPlaceQueenAt(board, rows, cols, r, c))
+                continue;
+
+            board[r][c] = robotQueen;
+            recomputeAttackedCells(board, rows, cols);
+
+            int oppR = -1, oppC = -1;
+            bool oppHasMove = findMediumMove(board, rows, cols, humanQueen, oppR, oppC);
+
+            int value = 0;
+
+            if (!oppHasMove)
+            {
+                value = 100000;
+            }
+            else
+            {
+                board[oppR][oppC] = humanQueen;
+                recomputeAttackedCells(board, rows, cols);
+
+                int freeAfterOpp = countFreeCells(board, rows, cols);
+                value = -freeAfterOpp;
+
+                board[oppR][oppC] = EMPTY_CELL;
+                recomputeAttackedCells(board, rows, cols);
+            }
+
+            board[r][c] = EMPTY_CELL;
+            recomputeAttackedCells(board, rows, cols);
+
+            if (!found || value > bestValue)
+            {
+                found = true;
+                bestValue = value;
+                bestR = r;
+                bestC = c;
+            }
+        }
+    }
+
+    return found;
+}
+
+bool makeRobotMove(char** board, int rows, int cols, int aiLevel, int& outR, int& outC)
+{
+    if (aiLevel == AI_EASY)
+    {
+        return findFirstValidMove(board, rows, cols, outR, outC);
+    }
+    else if (aiLevel == AI_MEDIUM)
+    {
+        return findMediumMove(board, rows, cols, P2_QUEEN, outR, outC);
+    }
+    else
+    {
+        return findHardMove(board, rows, cols, P2_QUEEN, P1_QUEEN, outR, outC);
+    }
+}
+
+void gameLoop(char**& board, int& rows, int& cols, int mode, int aiLevel)
 {
 
     int currentPlayer = 1;
@@ -647,6 +820,50 @@ void gameLoop(char**& board, int& rows, int& cols)
 
     while (!gameOver)
     {
+        if (mode == MODE_PVE && currentPlayer == ROBOT_PLAYER)
+        {
+            int r = -1, c = -1;
+
+            if (!makeRobotMove(board, rows, cols, aiLevel, r, c))
+            {
+                std::cout << "Robot has no valid moves!\n";
+                std::cout << "Player 1 wins!\n";
+
+                std::cout << "\nGame history:\n";
+                printMoveHistory(MOVE_LOG_FILE);
+
+                break;
+            }
+
+            int playerWhoMoved = currentPlayer;
+
+            if (handlePlayCommand(board, rows, cols, r, c, currentPlayer))
+            {
+                std::cout << "\nRobot played: (" << r << "," << c << ")\n";
+                printBoard(board, rows, cols);
+
+                moveNumber++;
+                appendMoveLog(MOVE_LOG_FILE, moveNumber,
+                    playerWhoMoved, r, c,
+                    board, rows, cols);
+
+                if (!hasAnyValidMove(board, rows, cols))
+                {
+                    std::cout << "No valid moves for Player "
+                        << currentPlayer << "!\n";
+                    std::cout << "Player "
+                        << playerWhoMoved << " wins!\n";
+
+                    std::cout << "\nGame history:\n";
+                    printMoveHistory(MOVE_LOG_FILE);
+
+                    gameOver = true;
+                }
+            }
+
+            continue; 
+        }
+
         std::cout << "\n> ";
         std::cin >> command;
 
@@ -748,9 +965,17 @@ int main()
     int rows = readBoardSize("rows");
     int cols = readBoardSize("columns");
 
+    int mode = chooseGameMode();
+    int aiLevel = AI_EASY;
+
+    if (mode == MODE_PVE)
+    {
+        aiLevel = chooseAiLevel();
+    }
+
     char** board = createBoard(rows, cols);
 
-    gameLoop(board, rows, cols);
+    gameLoop(board, rows, cols, mode, aiLevel);
 
     destroyBoard(board, rows);
     return 0;
