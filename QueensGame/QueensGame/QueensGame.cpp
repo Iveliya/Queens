@@ -1,5 +1,21 @@
 ﻿// QueensGame.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
+/**
+*
+* Solution to course project # 6
+* Introduction to programming course
+* Faculty of Mathematics and Informatics of Sofia University
+* Winter semester 2025/2026
+*
+* @author Iveliya Koleva
+* @idnumber 2MI0600641
+* @compiler VC
+*
+* <предназначение на файла>
+*
+*/
+
+
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <cstring>
@@ -133,9 +149,9 @@ void printBoard(char** board, int rows, int cols)
     }
 }
 
-void printMoveHistory(const char* filename)
+void printMoveHistory(const char* file)
 {
-    std::ifstream in(filename);
+    std::ifstream in(file);
     if (!in.is_open())
     {
         std::cout << "No history available.\n";
@@ -159,6 +175,8 @@ void printMoveHistory(const char* filename)
         std::cout << "(no moves yet)\n";
     }
 }
+
+
 
 
 bool isInside(int rows, int cols, int r, int c)
@@ -891,6 +909,9 @@ void gameLoop(char**& board, int& rows, int& cols, int mode, int aiLevel)
                         << currentPlayer << "!\n";
                     std::cout << "Player "
                         << playerWhoMoved << " wins!\n";
+                    std::cout<<std::endl;
+                    std::cout << "\nGame history:\n";
+                    printMoveHistory(MOVE_LOG_FILE);
                     gameOver = true;
                 }
             }
